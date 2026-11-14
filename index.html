@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Химийн Виртуал Лаборатори</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #dcfce7 100%);
+            background-size: 200% 200%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Glassmorphism utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 40px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        /* Pipette & Paper Strip Tools */
+        .tool-container { height: 90px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: -10px; z-index: 15; position: relative; }
+        .pipette { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 40px; height: 90px; }
+        .pipette-bulb { width: 28px; height: 36px; background: #ef4444; border-radius: 14px 14px 4px 4px; box-shadow: inset -3px -3px 6px rgba(0,0,0,0.2); border: 1px solid #b91c1c; z-index: 2; transition: transform 0.2s;}
+        .pipette-tube { width: 12px; height: 50px; background: rgba(255,255,255,0.7); border: 2px solid #cbd5e1; border-top: none; border-radius: 0 0 6px 6px; position: relative; overflow: hidden; margin-top: -2px; z-index: 1;}
+        .pipette-liquid { position: absolute; bottom: 0; width: 100%; height: 70%; }
+        
+        .paper-strip { width: 18px; height: 80px; border-radius: 2px; position: relative; box-shadow: 1px 1px 4px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.05); transition: transform 1s ease-in-out; z-index: 15; }
+        .paper-dipped { position: absolute; bottom: 0; width: 100%; height: 0%; transition: height 0.5s, background-color 0.5s; border-radius: 0 0 2px 2px; }
+
+        .squeeze { animation: squeezeBulb 0.6s ease-in-out; }
+        @keyframes squeezeBulb { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.7) translateY(5px); } }
+        
+        .dip-paper { animation: dipAction 1.5s ease-in-out; }
+        @keyframes dipAction { 0%, 100% { transform: translateY(0); } 50%, 80% { transform: translateY(60px); } }
+
+        /* Beaker CSS Art */
+        .beaker-container {
+            position: relative;
+            width: 120px;
+            height: 160px;
+            margin: 0 auto;
+            perspective: 1000px;
+        }
+        .beaker-glass {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            border: 4px solid rgba(203, 213, 225, 0.8);
+            background: linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.0) 50%, rgba(255,255,255,0.3) 100%);
+            border-top: none;
+            border-radius: 0 0 30px 30px;
+            overflow: hidden;
+            z-index: 10;
+            box-shadow: inset 0 -10px 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .beaker-glass::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            width: 8px;
+            height: 75%;
+            background: rgba(255,255,255,0.8);
+            border-radius: 10px;
+            filter: blur(1px);
+        }
+        /* Measure lines */
+        .beaker-glass::before {
+            content: '';
+            position: absolute;
+            bottom: 20px; left: 0;
+            width: 15px; height: 100px;
+            background: repeating-linear-gradient(to top, transparent, transparent 18px, rgba(255,255,255,0.8) 18px, rgba(255,255,255,0.8) 20px);
+            border-right: 1px solid rgba(255,255,255,0.5);
+        }
+        .liquid {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 60%;
+            background-color: rgba(200, 200, 200, 0.3);
+            transition: background-color 1s ease-in-out, height 0.5s;
+            border-radius: 0 0 26px 26px;
+            z-index: 5;
+            box-shadow: inset 0 5px 15px rgba(255,255,255,0.4);
+        }
+        
+        /* Drop Animation */
+        .drop {
+            position: absolute;
+            top: -10px;
+            transition: background-color 1s ease-in-out;
+        }
+
+        /* Badges */
+        .badge-icon {
+            font-size: 2rem;
+            filter: grayscale(100%);
+            transition: filter 0.5s, transform 0.3s;
+        }
+        .badge-unlocked .badge-icon {
+            filter: grayscale(0%);
+            transform: scale(1.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #059669; }
+
+        /* Notification Toast */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        /* Slime Game CSS */
+        .slime-char {
+            width: 140px;
+            height: 120px;
+            background-color: rgba(200,200,200,0.5);
+            border: 4px solid rgba(255,255,255,0.8);
+            border-radius: 50% 50% 40% 40% / 60% 60% 30% 30%;
+            margin: 0 auto;
+            position: relative;
+            transition: background-color 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset -10px -15px 20px rgba(0,0,0,0.1), 0 10px 15px rgba(0,0,0,0.1);
+        }
+        .slime-face {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            z-index: 10;
+        }
+        .shake {
+            animation: shakeAnim 0.5s;
+        }
+        @keyframes shakeAnim {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px) rotate(-5deg); }
+            75% { transform: translateX(10px) rotate(5deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 flex flex-col min-h-screen">
+
+    <!-- Header Navigation -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex-shrink-0 flex items-center cursor-pointer" onclick="navigate('home')">
+                    <span class="text-3xl mr-2">🧪</span>
+                    <span class="font-bold text-xl text-green-600 hidden sm:block">Химийн Виртуал Лаб</span>
+                </div>
+                <nav class="hidden md:flex space-x-4">
+                    <button onclick="navigate('lab6')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-green-50 hover:text-green-700 transition">6-р анги</button>
+                    <button onclick="navigate('lab7')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-green-50 hover:text-green-700 transition">7-р анги</button>
+                    <button onclick="navigate('reference')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-green-50 hover:text-green-700 transition">Лавлах</button>
+                    <button onclick="navigate('quiz')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-green-50 hover:text-green-700 transition">Тоглоом</button>
+                    <button onclick="navigate('profile')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition">Миний амжилт</button>
+                </nav>
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <button onclick="navigate('home')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-green-50">Нүүр хуудас</button>
+                <button onclick="navigate('lab6')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-green-50">6-р анги: Ахуйн бодис</button>
+                <button onclick="navigate('lab7')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-green-50">7-р анги: Лаборатори</button>
+                <button onclick="navigate('reference')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-green-50">Индикаторын лавлах</button>
+                <button onclick="navigate('quiz')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-green-50">Мэдлэг шалгах</button>
+                <button onclick="navigate('profile')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-blue-50">Миний тайлан & амжилт</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full relative">
+
+        <!-- HOME VIEW -->
+        <section id="view-home" class="view-section active text-center">
+            <div class="glass rounded-3xl p-8 max-w-3xl mx-auto mt-10 shadow-xl border-t-4 border-green-400">
+                <h1 class="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600 mb-4">ХИМИЙН ВИРТУАЛ ЛАБОРАТОРИ</h1>
+                <h2 class="text-xl sm:text-2xl text-gray-600 mb-8">Хүчил ба суурийг индикатороор танья!</h2>
+                
+                <div class="flex justify-center items-center space-x-6 mb-10 text-6xl">
+                    <div class="animate-bounce" style="animation-delay: 0s;">🍋</div>
+                    <div class="animate-bounce" style="animation-delay: 0.2s;">🧪</div>
+                    <div class="animate-bounce" style="animation-delay: 0.4s;">🧼</div>
+                </div>
+
+                <p class="text-lg text-gray-700 mb-8">
+                    Энэхүү лабораторид та ахуйн болон лабораторийн бодисуудын шинж чанарыг төрөл бүрийн индикатор ашиглан судлах болно. Туршилт хийж, мэдлэгээ шалгаад шагналын тэмдгүүд цуглуулаарай!
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button onclick="navigate('lab6')" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl shadow-md transition transform hover:-translate-y-1 font-semibold text-lg flex items-center justify-center">
+                        <span class="mr-2">🏠</span> 6-р анги: Ахуйн бодис
+                    </button>
+                    <button onclick="navigate('lab7')" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-xl shadow-md transition transform hover:-translate-y-1 font-semibold text-lg flex items-center justify-center">
+                        <span class="mr-2">🔬</span> 7-р анги: Лаборатори
+                    </button>
+                    <button onclick="navigate('reference')" class="bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-xl shadow-md transition transform hover:-translate-y-1 font-semibold text-lg flex items-center justify-center">
+                        <span class="mr-2">📚</span> Индикаторын лавлах
+                    </button>
+                    <button onclick="navigate('quiz')" class="bg-yellow-500 hover:bg-yellow-600 text-white p-4 rounded-xl shadow-md transition transform hover:-translate-y-1 font-semibold text-lg flex items-center justify-center">
+                        <span class="mr-2">🎮</span> Мэдлэг шалгах тоглоом
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6TH GRADE LAB VIEW -->
+        <section id="view-lab6" class="view-section hidden">
+            <div class="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">6-р анги: Ажлын хуудас</h2>
+                    <p class="text-sm text-gray-600">Индикатор ашиглан бодисыг хүчиллэг, суурилаг, саармаг шинжээр ангилах</p>
+                </div>
+                <div class="text-4xl hidden sm:block">📝</div>
+            </div>
+
+            <!-- Goals & Materials -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-yellow-800 mb-1">Судлах зорилго:</h3>
+                    <p class="text-sm text-yellow-900">Өдөр тутмын хэрэглээний бодис материалыг индикатор (Лакмус, Метилоранж, Фенолфталейн) ашиглан хүчиллэг, суурилаг, саармаг шинжээр нь ангилах.</p>
+                </div>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-blue-800 mb-1">Туршилтын материал:</h3>
+                    <p class="text-sm text-blue-900">Нимбэг, саван, хүнсний сод, Sprite ундаа</p>
+                </div>
+            </div>
+
+            <div class="glass p-6 rounded-2xl mb-6 shadow-md border-t-4 border-green-500">
+                <h3 class="text-xl font-bold text-green-700 mb-2 flex items-center"><span class="text-2xl mr-2">🧪</span> 1. Туршилт хийцгээе!</h3>
+                <p class="text-sm text-gray-600 mb-6">Дээрх 4 бодис дээр индикатор нэмж, өнгөний өөрчлөлтийг ажиглаад хүснэгтэд тэмдэглээрэй.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <!-- Controls -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Турших бодисоо сонгоно уу:</label>
+                        <select id="substance6-select" class="w-full p-2 mb-4 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none" onchange="resetExperiment('lab6')">
+                            <!-- Options generated by JS -->
+                        </select>
+
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Индикатор сонгоно уу:</label>
+                        <select id="indicator6-select" class="w-full p-2 mb-6 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none" onchange="resetExperiment('lab6')">
+                            <option value="litmus_red">📄 Лакмусын улаан цаас</option>
+                            <option value="litmus_blue">📄 Лакмусын хөх цаас</option>
+                            <option value="methyl_orange">🧪 Метилоранж (уусмал)</option>
+                            <option value="phenolphthalein">🧪 Фенолфталейн (уусмал)</option>
+                            <option value="universal">🧪 Универсаль (уусмал)</option>
+                            <option value="red_cabbage">🧪 Хүрэн байцаа (уусмал)</option>
+                        </select>
+
+                        <button id="btn-test-6" onclick="runExperiment6()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow transition duration-200">
+                            Туршилт хийх (Дусаах/Дүрэх)
+                        </button>
+                    </div>
+
+                    <!-- Simulation Area -->
+                    <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 flex flex-col items-center justify-center relative">
+                        <div id="indicator-icon-6" class="tool-container transition-transform duration-300 z-10">
+                            <!-- Injected by JS -->
+                        </div>
+                        
+                        <div class="beaker-container z-10">
+                            <div id="drop6" class="drop"></div>
+                            <div class="beaker-glass"></div>
+                            <div id="liquid6" class="liquid"></div>
+                        </div>
+                        <div id="result-text-6" class="mt-4 text-center font-bold text-lg min-h-[1.75rem] z-10 text-gray-800"></div>
+                    </div>
+                </div>
+
+                <!-- Worksheet Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm text-center border-collapse border border-gray-300 bg-white">
+                        <thead class="bg-gray-100 text-gray-700">
+                            <tr>
+                                <th class="border border-gray-300 px-2 py-3 w-10">№</th>
+                                <th class="border border-gray-300 px-2 py-3">Бодис</th>
+                                <th class="border border-gray-300 px-2 py-3 bg-red-50">Лакмусын улаан цаас</th>
+                                <th class="border border-gray-300 px-2 py-3 bg-blue-50">Лакмусын хөх цаас</th>
+                                <th class="border border-gray-300 px-2 py-3 bg-orange-50">Метилоранж</th>
+                                <th class="border border-gray-300 px-2 py-3 bg-pink-50">Фенолфталейн</th>
+                                <th class="border border-gray-300 px-2 py-3 bg-purple-50">Универсаль</th>
+                                <th class="border border-gray-300 px-2 py-3 bg-indigo-50">Хүрэн байцаа</th>
+                                <th class="border border-gray-300 px-2 py-3 bg-green-50 w-32">Дүгнэлт<br><span class="text-xs font-normal">(хүчиллэг/суурилаг/саармаг)</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="worksheet-table-body">
+                            <!-- Rows generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Exercises -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Exercise 1 -->
+                <div class="glass p-6 rounded-2xl shadow-md border-t-4 border-yellow-400">
+                    <h3 class="text-xl font-bold text-yellow-600 mb-4 flex items-center"><span class="text-2xl mr-2">⭐</span> 2. Дасгал 1. Нууц бодисыг таах!</h3>
+                    <p class="text-sm text-gray-600 mb-4">Дараах өнгөний өөрчлөлтөөс тухайн орчныг тодорхойлж сонгоно уу.</p>
+                    
+                    <div class="space-y-3 text-sm">
+                        <div class="bg-blue-50 p-3 rounded border border-blue-100 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <div>
+                                1. Лакмус улаан ➔ хөх, Лакмус хөх ➔ хөх,<br>Метилоранж ➔ шар
+                            </div>
+                            <select class="p-1 border border-gray-300 rounded focus:outline-none focus:border-green-500 w-full sm:w-32" onchange="checkEx1(this, 'base')">
+                                <option value="">Сонгох...</option>
+                                <option value="acid">Хүчиллэг</option>
+                                <option value="base">Суурилаг</option>
+                                <option value="neutral">Саармаг</option>
+                            </select>
+                        </div>
+                        <div class="bg-red-50 p-3 rounded border border-red-100 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <div>
+                                2. Лакмус улаан ➔ улаан, Лакмус хөх ➔ улаан,<br>Фенолфталейн ➔ өнгөгүй
+                            </div>
+                            <select class="p-1 border border-gray-300 rounded focus:outline-none focus:border-green-500 w-full sm:w-32" onchange="checkEx1(this, 'acid')">
+                                <option value="">Сонгох...</option>
+                                <option value="acid">Хүчиллэг</option>
+                                <option value="base">Суурилаг</option>
+                                <option value="neutral">Саармаг</option>
+                            </select>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded border border-green-100 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <div>
+                                3. Лакмус улаан ➔ улаан, Лакмус хөх ➔ хөх,<br>Метилоранж ➔ шар
+                            </div>
+                            <select class="p-1 border border-gray-300 rounded focus:outline-none focus:border-green-500 w-full sm:w-32" onchange="checkEx1(this, 'neutral')">
+                                <option value="">Сонгох...</option>
+                                <option value="acid">Хүчиллэг</option>
+                                <option value="base">Суурилаг</option>
+                                <option value="neutral">Саармаг</option>
+                            </select>
+                        </div>
+                        <div class="bg-purple-50 p-3 rounded border border-purple-100 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <div>
+                                4. Лакмус улаан ➔ хөх, Лакмус хөх ➔ хөх,<br>Фенолфталейн ➔ ягаан
+                            </div>
+                            <select class="p-1 border border-gray-300 rounded focus:outline-none focus:border-green-500 w-full sm:w-32" onchange="checkEx1(this, 'base')">
+                                <option value="">Сонгох...</option>
+                                <option value="acid">Хүчиллэг</option>
+                                <option value="base">Суурилаг</option>
+                                <option value="neutral">Саармаг</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exercise 2 & Conclusion -->
+                <div class="flex flex-col gap-6">
+                    <div class="glass p-6 rounded-2xl shadow-md border-t-4 border-pink-400">
+                        <h3 class="text-xl font-bold text-pink-600 mb-4 flex items-center"><span class="text-2xl mr-2">🧠</span> 3. Дасгал 2. Ангилж, сонгоорой!</h3>
+                        
+                        <div class="mb-6">
+                            <p class="font-semibold text-sm mb-2 text-gray-800">А. Дараах бодисыг ангилна уу.</p>
+                            <p class="text-xs text-gray-500 mb-3 italic">Нимбэг, саван, хүнсний сод, Sprite ундаа</p>
+                            
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <label class="block text-xs font-bold text-red-600 mb-1">Хүчиллэг:</label>
+                                    <input type="text" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-red-400" placeholder="Бодисын нэр...">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-blue-600 mb-1">Суурилаг:</label>
+                                    <input type="text" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-400" placeholder="Бодисын нэр...">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t border-gray-200 pt-4">
+                            <p class="font-semibold text-sm mb-3 text-gray-800">В. Зөв хариултыг сонгоорой.</p>
+                            <div class="space-y-4 text-sm">
+                                <div>
+                                    <p class="mb-1 text-gray-700">1. Фенолфталейн индикатор ямар орчинд ягаан өнгөтэй вэ?</p>
+                                    <div class="flex gap-4">
+                                        <label class="flex items-center"><input type="radio" name="q1" class="mr-1" onchange="checkRadio(this, false)"> А. Хүчиллэг</label>
+                                        <label class="flex items-center"><input type="radio" name="q1" class="mr-1" onchange="checkRadio(this, true)"> В. Суурилаг</label>
+                                        <label class="flex items-center"><input type="radio" name="q1" class="mr-1" onchange="checkRadio(this, false)"> С. Саармаг</label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="mb-1 text-gray-700">2. Метилоранж индикатор хүчиллэг орчинд ямар өнгө үзүүлэх вэ?</p>
+                                    <div class="flex gap-4">
+                                        <label class="flex items-center"><input type="radio" name="q2" class="mr-1" onchange="checkRadio(this, true)"> А. Улаан</label>
+                                        <label class="flex items-center"><input type="radio" name="q2" class="mr-1" onchange="checkRadio(this, false)"> В. Шар</label>
+                                        <label class="flex items-center"><input type="radio" name="q2" class="mr-1" onchange="checkRadio(this, false)"> С. Цэнхэр</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conclusion Box -->
+                    <div class="bg-yellow-100 border-2 border-yellow-300 p-5 rounded-2xl relative shadow-sm">
+                        <div class="absolute -top-4 -left-2 text-3xl transform -rotate-12">✏️</div>
+                        <h4 class="font-bold text-gray-800 mb-3 ml-6 text-lg">Дүгнэлт:</h4>
+                        <div class="space-y-3 text-sm text-gray-700">
+                            <p>
+                                1. Индикатор нь <input type="text" class="border-b-2 border-gray-400 bg-transparent w-32 focus:outline-none focus:border-green-600 px-1 text-center" placeholder="..."> орчинд өнгө өөрчилдөг.
+                            </p>
+                            <p>
+                                2. Өдөр тутмын хэрэглээний зарим бодис <input type="text" class="border-b-2 border-gray-400 bg-transparent w-40 focus:outline-none focus:border-green-600 px-1 text-center" placeholder="хүчиллэг/суурилаг"> шинжтэй байдаг.
+                            </p>
+                        </div>
+                        <div class="absolute bottom-2 right-2 rotate-3 bg-yellow-400 text-yellow-900 font-bold px-3 py-1 rounded shadow-sm text-xs">
+                            Жижиг туршилт - Их мэдлэг!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7TH GRADE LAB VIEW -->
+        <section id="view-lab7" class="view-section hidden">
+            <!-- Safety Banner -->
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6 rounded-r-lg flex items-start" role="alert">
+                <span class="text-2xl mr-3">⚠️</span>
+                <div>
+                    <p class="font-bold">Аюулгүй ажиллагааны санамж</p>
+                    <p class="text-sm">Энэхүү виртуал орчинд хүчил, суурьтай ажиллаж байна. Бодит лабораторид химийн бодистой харьцахдаа үргэлж багшийн заавраар, хамгаалах нүдний шил, бээлий өмсөх ёстойг анхаарна уу.</p>
+                </div>
+            </div>
+
+            <div class="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">7-р анги: Лабораторийн бодис</h2>
+                    <p class="text-sm text-gray-600">Зорилго: Нууцлагдсан уусмалуудын орчныг тодорхойлж таних.</p>
+                </div>
+                <div class="text-4xl hidden sm:block">🔬</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Rack and Controls -->
+                <div class="glass p-6 rounded-2xl shadow-md">
+                    <h3 class="text-lg font-semibold mb-4">Уусмалын тавиур</h3>
+                    <p class="text-sm text-gray-500 mb-4">Аль нэг уусмалыг сонгож хуруу шилэнд хийнэ үү.</p>
+                    
+                    <div class="flex justify-center space-x-4 mb-8" id="rack-7">
+                        <!-- Tubes generated by JS -->
+                    </div>
+
+                    <div id="control-area-7" class="hidden opacity-0 transition-opacity duration-500">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Сонгосон: <span id="selected-tube-name" class="font-bold text-blue-600"></span></label>
+                        <select id="indicator7-select" class="w-full p-3 mb-4 bg-white border border-gray-300 rounded-lg focus:outline-none">
+                            <!-- Options generated by JS -->
+                        </select>
+                        <button onclick="runExperiment7()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-xl shadow transition mb-4">
+                            Индикатор дусаах
+                        </button>
+                        
+                        <div class="border-t pt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Энэ ямар орчинтой уусмал вэ?</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="makeConclusion('acid')" class="bg-red-100 hover:bg-red-200 text-red-800 py-2 rounded-lg border border-red-300 transition text-sm font-medium">Хүчиллэг</button>
+                                <button onclick="makeConclusion('neutral')" class="bg-green-100 hover:bg-green-200 text-green-800 py-2 rounded-lg border border-green-300 transition text-sm font-medium">Саармаг</button>
+                                <button onclick="makeConclusion('base')" class="bg-blue-100 hover:bg-blue-200 text-blue-800 py-2 rounded-lg border border-blue-300 transition text-sm font-medium">Суурилаг</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Big Test Tube Area -->
+                <div class="glass p-6 rounded-2xl shadow-md flex flex-col items-center justify-center min-h-[300px]">
+                    <div class="relative w-full h-full flex flex-col items-center justify-center">
+                        <div id="drop7" class="drop" style="top: -20px;"></div>
+                        <div class="test-tube transform scale-150 mb-10">
+                            <div id="liquid7" class="tube-liquid" style="background-color: transparent;"></div>
+                        </div>
+                        <div id="result-text-7" class="mt-4 text-center text-lg min-h-[2rem]">Хуруу шил сонгоно уу.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Discovery Table -->
+            <div class="glass p-6 rounded-2xl shadow-md mt-6">
+                <h3 class="text-lg font-semibold mb-4">Нээлтийн тэмдэглэл</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="discovery-cards">
+                    <!-- Cards generated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- REFERENCE VIEW -->
+        <section id="view-reference" class="view-section hidden">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Индикаторын лавлах</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="reference-grid">
+                <!-- Cards generated by JS -->
+            </div>
+        </section>
+
+        <!-- QUIZ VIEW -->
+        <section id="view-quiz" class="view-section hidden">
+            <!-- GAME MENU -->
+            <div id="game-menu" class="glass rounded-2xl p-6 md:p-10 max-w-4xl mx-auto shadow-xl text-center">
+                <h2 class="text-3xl font-bold text-gray-800 mb-8">Тоглоомын цэс</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Quiz Option -->
+                    <div class="bg-white p-8 rounded-2xl shadow-md border-t-4 border-yellow-400 hover:shadow-lg transition transform hover:-translate-y-1 cursor-pointer" onclick="initStartQuiz()">
+                        <div class="text-6xl mb-4">🎮</div>
+                        <h3 class="text-xl font-bold mb-2">Химийн сорил</h3>
+                        <p class="text-gray-600 mb-4">10 асуулттай сорил өгч, мэдлэгээ шалгаарай.</p>
+                        <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-lg font-bold">Тоглох</button>
+                    </div>
+                    <!-- Slime Option -->
+                    <div class="bg-white p-8 rounded-2xl shadow-md border-t-4 border-green-400 hover:shadow-lg transition transform hover:-translate-y-1 cursor-pointer" onclick="startSlimeGame()">
+                        <div class="text-6xl mb-4">👾</div>
+                        <h3 class="text-xl font-bold mb-2">Индикатор Слайм</h3>
+                        <p class="text-gray-600 mb-4">Хөөрхөн мангасыг зөв бодисоор хооллож өнгийг нь өөрчил!</p>
+                        <button class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Тоглох</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Existing Quiz (wrapped) -->
+            <div id="quiz-main-container" class="glass rounded-2xl p-6 md:p-10 max-w-3xl mx-auto shadow-xl hidden">
+                <button onclick="showGameMenu()" class="text-gray-500 hover:text-gray-800 font-bold text-sm mb-4 flex items-center">
+                    <span>⬅ Буцах</span>
+                </button>
+                
+                <div id="quiz-intro" class="text-center">
+                    <div class="text-6xl mb-4">🎮</div>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-4">Химийн лабораторийн сорил</h2>
+                    <p class="text-gray-600 mb-8">Энэхүү сорил нь 10 асуулттай бөгөөд индикаторын өнгө, бодисын ангилал болон нууц бодис таних мэдлэгийг шалгана.</p>
+                    <button onclick="startQuiz()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-full shadow-lg text-xl transition transform hover:scale-105">
+                        Тоглоом эхлэх
+                    </button>
+                </div>
+
+                <div id="quiz-active" class="hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <span id="quiz-progress" class="text-sm font-bold text-gray-500">Асуулт 1 / 10</span>
+                        <span class="text-sm font-bold bg-green-100 text-green-800 py-1 px-3 rounded-full">Оноо: <span id="quiz-score">0</span></span>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-8">
+                      <div id="quiz-progress-bar" class="bg-yellow-500 h-2.5 rounded-full transition-all duration-300" style="width: 10%"></div>
+                    </div>
+
+                    <div id="quiz-question-container" class="mb-8 min-h-[150px]">
+                        <h3 id="quiz-question" class="text-xl md:text-2xl font-semibold text-gray-800 mb-6">Асуулт энд гарна</h3>
+                        <div id="quiz-visual" class="flex justify-center mb-4 min-h-[60px]">
+                            <!-- Optional visual aid (color box) -->
+                        </div>
+                        <div id="quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Buttons generated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div id="quiz-feedback" class="hidden p-4 rounded-lg mb-4 text-center font-medium">
+                        <!-- Feedback text -->
+                    </div>
+                    
+                    <div class="text-right">
+                        <button id="btn-next-question" onclick="nextQuestion()" class="hidden bg-gray-800 hover:bg-gray-900 text-white py-2 px-6 rounded-lg transition">Дараагийнх ➔</button>
+                    </div>
+                </div>
+
+                <div id="quiz-result" class="hidden text-center py-8">
+                    <div id="quiz-result-icon" class="text-7xl mb-4">🏆</div>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Сорил дууслаа!</h2>
+                    <p class="text-xl text-gray-600 mb-6">Таны авсан оноо: <span id="final-score" class="font-bold text-green-600 text-2xl"></span> / 100</p>
+                    <p id="quiz-result-message" class="text-gray-700 mb-8 italic"></p>
+                    <button onclick="showGameMenu()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg mr-2 transition">Цэс рүү буцах</button>
+                    <button onclick="startQuiz()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition">Дахин тоглох</button>
+                </div>
+            </div>
+
+            <!-- Slime Game Container -->
+            <div id="slime-game-container" class="glass rounded-2xl p-6 md:p-10 max-w-3xl mx-auto shadow-xl hidden">
+                <button onclick="showGameMenu()" class="text-gray-500 hover:text-gray-800 font-bold text-sm mb-4 flex items-center">
+                    <span>⬅ Буцах</span>
+                </button>
+                
+                <div id="slime-active">
+                    <div class="flex justify-between items-center mb-6">
+                        <span id="slime-progress" class="text-sm font-bold text-gray-500">Үе 1 / 5</span>
+                        <span class="text-sm font-bold bg-green-100 text-green-800 py-1 px-3 rounded-full">Оноо: <span id="slime-score">0</span></span>
+                    </div>
+
+                    <div class="text-center mb-8 pt-4">
+                        <div class="inline-block relative">
+                            <!-- Speech Bubble -->
+                            <div id="slime-speech" class="absolute -top-16 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded-xl shadow-md border border-gray-200 text-sm font-bold whitespace-nowrap z-20">
+                                Би Лакмус байна. Намайг улаан болгооч!
+                                <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-gray-200 rotate-45"></div>
+                            </div>
+                            
+                            <!-- Slime Character -->
+                            <div id="slime-character" class="slime-char mt-16">
+                                <div id="slime-face" class="slime-face">( º _ º )</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-center font-bold text-gray-700 mb-4">Аль бодисоор хооллох вэ?</h3>
+                    <div id="slime-options" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Buttons generated by JS -->
+                    </div>
+                </div>
+
+                <div id="slime-result" class="hidden text-center py-8">
+                    <div class="text-7xl mb-4">🎉</div>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Тоглоом дууслаа!</h2>
+                    <p class="text-xl text-gray-600 mb-6">Таны оноо: <span id="slime-final-score" class="font-bold text-green-600 text-2xl"></span> / 5</p>
+                    <button onclick="startSlimeGame()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition mr-2">Дахин тоглох</button>
+                    <button onclick="showGameMenu()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg transition">Цэс рүү буцах</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PROFILE & ACHIEVEMENTS VIEW -->
+        <section id="view-profile" class="view-section hidden">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Миний тайлан ба Амжилт</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Stats -->
+                <div class="glass p-6 rounded-2xl shadow-md col-span-1">
+                    <h3 class="text-xl font-bold text-blue-800 mb-4 border-b pb-2">Ерөнхий үзүүлэлт</h3>
+                    <ul class="space-y-4">
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-600">Хийсэн туршилт (6-р анги):</span>
+                            <span id="stat-exp6" class="font-bold text-lg bg-blue-100 text-blue-800 py-1 px-3 rounded-lg">0</span>
+                        </li>
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-600">Таних туршилт (7-р анги):</span>
+                            <span id="stat-exp7" class="font-bold text-lg bg-blue-100 text-blue-800 py-1 px-3 rounded-lg">0 / 4</span>
+                        </li>
+                        <li class="flex justify-between items-center">
+                            <span class="text-gray-600">Тоглоомын дээд оноо:</span>
+                            <span id="stat-score" class="font-bold text-lg bg-green-100 text-green-800 py-1 px-3 rounded-lg">0</span>
+                        </li>
+                    </ul>
+                    <button onclick="clearData()" class="mt-8 w-full border border-red-300 text-red-500 hover:bg-red-50 py-2 rounded-lg text-sm transition">Бүх өгөгдлийг устгах</button>
+                </div>
+
+                <!-- Badges -->
+                <div class="glass p-6 rounded-2xl shadow-md col-span-1 lg:col-span-2">
+                    <h3 class="text-xl font-bold text-yellow-600 mb-4 border-b pb-2">Амжилтын тэмдэг</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center" id="badges-container">
+                        <!-- Badges generated by JS -->
+                    </div>
+                </div>
+                
+                <!-- Complete 6th Grade Table in Profile -->
+                <div class="glass p-6 rounded-2xl shadow-md col-span-1 lg:col-span-3">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">6-р ангийн туршилтын түүх</h3>
+                    <div class="overflow-x-auto max-h-[300px]">
+                        <table class="min-w-full text-sm text-left">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-2">Бодис</th>
+                                    <th class="px-4 py-2">Индикатор</th>
+                                    <th class="px-4 py-2">Үр дүн</th>
+                                </tr>
+                            </thead>
+                            <tbody id="profile-table-6">
+                                <!-- Populated from storage -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-auto py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
+            &copy; 2026 Химийн Виртуал Лаборатори. Боловсролын зориулалттай.
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast">Мэдэгдэл</div>
+
+    <script>
+        // --- DATA DEFINITIONS ---
+
+        const pH_TYPES = { ACID: 'acid', NEUTRAL: 'neutral', BASE: 'base' };
+        
+        // Universal color mapping for visual feedback outside of strict indicator rules
+        const typeColors = {
+            acid: '#ef4444',   // Red-ish
+            neutral: '#22c55e', // Green-ish
+            base: '#3b82f6'    // Blue-ish
+        };
+
+        const typeLabels = {
+            acid: 'Хүчиллэг',
+            neutral: 'Саармаг',
+            base: 'Суурилаг'
+        };
+
+        const indicators = [
+            {
+                id: 'litmus_blue',
+                name: 'Хөх лакмус',
+                icon: '🟦',
+                toolType: 'paper',
+                toolColor: '#60a5fa', /* Blue paper */
+                desc: 'Хүчиллэг орчинг илрүүлэхэд тохиромжтой.',
+                colors: { acid: '#ff4d4d', neutral: '#4da6ff', base: '#4da6ff' },
+                labels: { acid: 'Улаан', neutral: 'Хөх', base: 'Хөх' }
+            },
+            {
+                id: 'litmus_red',
+                name: 'Улаан лакмус',
+                icon: '🟥',
+                toolType: 'paper',
+                toolColor: '#f87171', /* Red paper */
+                desc: 'Суурилаг орчинг илрүүлэхэд тохиромжтой.',
+                colors: { acid: '#ff4d4d', neutral: '#ff4d4d', base: '#4da6ff' },
+                labels: { acid: 'Улаан', neutral: 'Улаан', base: 'Хөх' }
+            },
+            {
+                id: 'phenolphthalein',
+                name: 'Фенолфталейн',
+                icon: '🧪',
+                toolType: 'liquid',
+                toolColor: 'rgba(255,255,255,0.5)', /* Clear liquid */
+                desc: 'Суурилаг орчинд тод ягаан өнгөтэй болдог.',
+                colors: { acid: 'rgba(255,255,255,0.2)', neutral: 'rgba(255,255,255,0.2)', base: '#ff66b3' },
+                labels: { acid: 'Өнгөгүй', neutral: 'Өнгөгүй', base: 'Ягаан' }
+            },
+            {
+                id: 'methyl_orange',
+                name: 'Метилоранж',
+                icon: '🟠',
+                toolType: 'liquid',
+                toolColor: '#f97316', /* Orange liquid */
+                desc: 'Хүчиллэг орчинд улаан, бусад орчинд шар.',
+                colors: { acid: '#ff3300', neutral: '#ffd633', base: '#ffd633' },
+                labels: { acid: 'Улаан', neutral: 'Шар', base: 'Шар' }
+            },
+            {
+                id: 'universal',
+                name: 'Универсаль индикатор',
+                icon: '🌈',
+                toolType: 'liquid',
+                toolColor: 'linear-gradient(to bottom, #ef4444, #eab308, #22c55e, #3b82f6)', /* Rainbow drop */
+                desc: 'pH-ийн утгаас хамаарч солонгын өнгөөр хувирна.',
+                colors: { acid: '#ff471a', neutral: '#33cc33', base: '#6600cc' }, // Simplified representations
+                labels: { acid: 'Улаан-Улбар шар', neutral: 'Ногоон', base: 'Хөх-Нил ягаан' }
+            },
+            {
+                id: 'red_cabbage',
+                name: 'Хүрэн байцааны шүүс',
+                icon: '🥬',
+                toolType: 'liquid',
+                toolColor: '#7e22ce', /* Purple liquid */
+                desc: 'Хүчиллэгт улаан/ягаан, саармагт нил ягаан, суурилагт ногоон/шар.',
+                colors: { acid: '#ff3366', neutral: '#9933cc', base: '#33cc33' },
+                labels: { acid: 'Улаан ягаан', neutral: 'Нил ягаан', base: 'Ногоон' }
+            }
+        ];
+
+        const substances6 = [
+            { id: 'lemon', name: 'Нимбэг', type: pH_TYPES.ACID, icon: '🍋', baseColor: 'rgba(255, 255, 100, 0.4)' },
+            { id: 'soap', name: 'Саван', type: pH_TYPES.BASE, icon: '🧼', baseColor: 'rgba(200, 230, 255, 0.5)' },
+            { id: 'baking_soda', name: 'Хүнсний сод', type: pH_TYPES.BASE, icon: '🧂', baseColor: 'rgba(240, 240, 240, 0.6)' },
+            { id: 'sprite', name: 'Sprite ундаа', type: pH_TYPES.ACID, icon: '🥤', baseColor: 'rgba(200, 255, 200, 0.2)' }
+        ];
+
+        const substances7 = [
+            { id: 'tube_A', code: 'Уусмал A', name: 'Давсны хүчил (HCl)', type: pH_TYPES.ACID },
+            { id: 'tube_B', code: 'Уусмал B', name: 'Натрийн гидроксид (NaOH)', type: pH_TYPES.BASE },
+            { id: 'tube_C', code: 'Уусмал C', name: 'Нэрмэл ус (H₂O)', type: pH_TYPES.NEUTRAL },
+            { id: 'tube_D', code: 'Уусмал D', name: 'Цууны хүчил (CH₃COOH)', type: pH_TYPES.ACID }
+        ];
+
+        const badgesDef = [
+            { id: 'novice', name: 'Анхан шатны судлаач', desc: 'Эхний туршилтаа хийсэн', icon: '🔍', condition: (d) => d.exp6History.length > 0 },
+            { id: 'little_scientist', name: 'Бяцхан судлаач', desc: '5 төрлийн туршилт хийсэн', icon: '🧪', condition: (d) => d.exp6History.length >= 5 },
+            { id: 'quiz_master', name: 'Химийн мастер', desc: 'Сорилд 80+ оноо авсан', icon: '🎓', condition: (d) => d.maxScore >= 80 },
+            { id: 'expert', name: 'Лабораторийн эксперт', desc: 'Бүх нууц уусмалыг таньсан', icon: '🌟', condition: (d) => Object.keys(d.discovered7).length === substances7.length }
+        ];
+
+        let quizQuestions = []; // Populated dynamically
+
+        // --- STATE & STORAGE ---
+
+        let userData = {
+            worksheet6: {}, // { substanceId: { indicatorId: resultColorLabel, ... }, ... }
+            discovered7: {}, // {tubeId: true}
+            maxScore: 0,
+            unlockedBadges: []
+        };
+
+        function saveData() {
+            localStorage.setItem('chemLabData', JSON.stringify(userData));
+            checkBadges();
+            updateProfileStats();
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('chemLabData');
+            if (saved) {
+                try {
+                    userData = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Error parsing save data");
+                }
+            }
+            checkBadges();
+        }
+
+        function clearData() {
+            userData = { worksheet6: {}, discovered7: {}, maxScore: 0, unlockedBadges: [] };
+            saveData();
+            showToast("Өгөгдөл устгагдлаа");
+            renderWorksheetTable();
+            initLab7();
+            updateProfileStats();
+            renderBadges();
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.className = "show";
+            setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // --- NAVIGATION ---
+
+        function navigate(sectionId) {
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('active');
+            });
+            document.getElementById(`view-${sectionId}`).classList.remove('hidden');
+            document.getElementById(`view-${sectionId}`).classList.add('active');
+            
+            // Close mobile menu if open
+            document.getElementById('mobile-menu').classList.add('hidden');
+
+            // Specific initialization per section
+            if (sectionId === 'profile') updateProfileStats();
+            if (sectionId === 'lab6') renderWorksheetTable();
+            if (sectionId === 'quiz') {
+                if (typeof showGameMenu === 'function') showGameMenu();
+            }
+            window.scrollTo(0,0);
+        }
+
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // --- CORE UTILS ---
+
+        function getIndicatorColors(indicatorId, substanceType) {
+            const ind = indicators.find(i => i.id === indicatorId);
+            return {
+                color: ind.colors[substanceType],
+                label: ind.labels[substanceType]
+            };
+        }
+
+        // --- INITIALIZATION ---
+
+        window.onload = function() {
+            loadData();
+            initLab6();
+            initLab7();
+            initReference();
+            generateQuizQuestions();
+            renderBadges();
+            updateProfileStats();
+            navigate('home');
+        };
+
+        // --- 6TH GRADE LAB LOGIC ---
+
+        function initLab6() {
+            const subSelect = document.getElementById('substance6-select');
+            subSelect.innerHTML = '';
+            substances6.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.icon} ${s.name}`;
+                subSelect.appendChild(opt);
+            });
+            
+            // Initialize worksheet data structure if empty
+            if (!userData.worksheet6) userData.worksheet6 = {};
+            substances6.forEach(s => {
+                if (!userData.worksheet6[s.id]) userData.worksheet6[s.id] = {};
+            });
+            
+            resetExperiment('lab6');
+            renderWorksheetTable();
+        }
+
+        function resetExperiment(labId) {
+            if (labId === 'lab6') {
+                const subId = document.getElementById('substance6-select').value;
+                const sub = substances6.find(s => s.id === subId);
+                const indId = document.getElementById('indicator6-select').value;
+                const ind = indicators.find(i => i.id === indId);
+                const liquid = document.getElementById('liquid6');
+                const indIconContainer = document.getElementById('indicator-icon-6');
+                
+                liquid.style.backgroundColor = sub.baseColor;
+                liquid.style.height = '60%';
+                
+                // Inject Tool HTML (Pipette or Paper)
+                if (indIconContainer && ind) {
+                    if (ind.toolType === 'liquid') {
+                        indIconContainer.innerHTML = `
+                            <div class="pipette" id="tool-anim-6">
+                                <div class="pipette-bulb" id="bulb-6"></div>
+                                <div class="pipette-tube">
+                                    <div class="pipette-liquid" style="background: ${ind.toolColor}"></div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        indIconContainer.innerHTML = `
+                            <div class="paper-strip" id="tool-anim-6" style="background-color: ${ind.toolColor}">
+                                <div class="paper-dipped" id="paper-dipped-6"></div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // Reset drop visibility
+                document.getElementById('drop6').style.opacity = '0';
+                document.getElementById('result-text-6').textContent = '';
+                document.getElementById('btn-test-6').disabled = false;
+            }
+        }
+
+        function runExperiment6() {
+            const subId = document.getElementById('substance6-select').value;
+            const indId = document.getElementById('indicator6-select').value;
+            const sub = substances6.find(s => s.id === subId);
+            const ind = indicators.find(i => i.id === indId);
+            
+            const btn = document.getElementById('btn-test-6');
+            btn.disabled = true;
+
+            // Determine result
+            const result = getIndicatorColors(indId, sub.type);
+            const drop = document.getElementById('drop6');
+            const toolAnim = document.getElementById('tool-anim-6');
+            
+            let animDuration = 1000;
+
+            if (ind.toolType === 'liquid') {
+                // Pipette Animation
+                const bulb = document.getElementById('bulb-6');
+                bulb.classList.remove('squeeze');
+                void bulb.offsetWidth;
+                bulb.classList.add('squeeze');
+                
+                // Set drop color
+                drop.style.background = ind.toolColor;
+                if(indId === 'universal') drop.style.background = '#eab308'; // Single color for falling drop
+                
+                setTimeout(() => {
+                    drop.classList.remove('animate-drop');
+                    void drop.offsetWidth;
+                    drop.classList.add('animate-drop');
+                }, 200); // Wait for squeeze
+                animDuration = 800;
+            } else {
+                // Paper Dip Animation
+                toolAnim.classList.remove('dip-paper');
+                void toolAnim.offsetWidth;
+                toolAnim.classList.add('dip-paper');
+                
+                const dippedPart = document.getElementById('paper-dipped-6');
+                setTimeout(() => {
+                    dippedPart.style.height = '40%';
+                    dippedPart.style.backgroundColor = result.color;
+                }, 750); // Color changes at bottom of dip
+                animDuration = 1500;
+            }
+
+            setTimeout(() => {
+                const liquid = document.getElementById('liquid6');
+                
+                // Only change main liquid color if it's a liquid indicator
+                if (ind.toolType === 'liquid') {
+                    liquid.style.backgroundColor = result.color;
+                    liquid.style.height = '65%';
+                    setTimeout(()=> liquid.style.height = '60%', 200);
+                }
+
+                const resText = `${result.label}`;
+                document.getElementById('result-text-6').textContent = `Үр дүн: ${resText} өнгөтэй боллоо`;
+                document.getElementById('result-text-6').style.color = result.color !== 'rgba(255,255,255,0.2)' ? result.color : '#666';
+
+                // Save result in worksheet grid
+                if (!userData.worksheet6[sub.id]) userData.worksheet6[sub.id] = {};
+                userData.worksheet6[sub.id][indId] = result.label;
+                
+                saveData();
+                renderWorksheetTable();
+
+                btn.disabled = false;
+            }, 600); // Matches animation timing
+        }
+
+        function renderWorksheetTable() {
+            const tbody = document.getElementById('worksheet-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            substances6.forEach((sub, index) => {
+                const rowData = userData.worksheet6[sub.id] || {};
+                
+                const renderCell = (indId) => {
+                    const val = rowData[indId];
+                    if (!val) return '<span class="text-gray-300 italic">-</span>';
+                    
+                    // Add some color styling to the text based on value
+                    let colorClass = 'text-gray-800 font-medium';
+                    if(val === 'Улаан') colorClass = 'text-red-600 font-bold';
+                    if(val === 'Хөх') colorClass = 'text-blue-600 font-bold';
+                    if(val === 'Шар') colorClass = 'text-yellow-600 font-bold';
+                    if(val === 'Ягаан') colorClass = 'text-pink-600 font-bold';
+                    if(val === 'Өнгөгүй') colorClass = 'text-gray-500';
+                    
+                    return `<span class="${colorClass}">${val}</span>`;
+                };
+
+                // Determine conclusion if all tested
+                let conclusion = '<select class="w-full text-xs p-1 border rounded bg-transparent" onchange="updateConclusion(\''+sub.id+'\', this.value)">';
+                const savedConc = rowData.conclusion || '';
+                conclusion += `<option value="">Сонгох...</option>`;
+                conclusion += `<option value="Хүчиллэг" ${savedConc==='Хүчиллэг'?'selected':''}>Хүчиллэг</option>`;
+                conclusion += `<option value="Суурилаг" ${savedConc==='Суурилаг'?'selected':''}>Суурилаг</option>`;
+                conclusion += `<option value="Саармаг" ${savedConc==='Саармаг'?'selected':''}>Саармаг</option>`;
+                conclusion += `</select>`;
+
+                const rowHTML = `
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="border border-gray-300 px-2 py-2 font-medium">${index + 1}</td>
+                        <td class="border border-gray-300 px-2 py-2 text-left font-semibold">${sub.name}</td>
+                        <td class="border border-gray-300 px-2 py-2">${renderCell('litmus_red')}</td>
+                        <td class="border border-gray-300 px-2 py-2">${renderCell('litmus_blue')}</td>
+                        <td class="border border-gray-300 px-2 py-2">${renderCell('methyl_orange')}</td>
+                        <td class="border border-gray-300 px-2 py-2">${renderCell('phenolphthalein')}</td>
+                        <td class="border border-gray-300 px-2 py-2">${renderCell('universal')}</td>
+                        <td class="border border-gray-300 px-2 py-2">${renderCell('red_cabbage')}</td>
+                        <td class="border border-gray-300 px-2 py-2">${conclusion}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', rowHTML);
+            });
+        }
+
+        function updateConclusion(subId, val) {
+            if (!userData.worksheet6[subId]) userData.worksheet6[subId] = {};
+            userData.worksheet6[subId].conclusion = val;
+            saveData();
+        }
+
+        // --- EXERCISE HANDLERS ---
+        function checkEx1(selectElem, correctVal) {
+            if(selectElem.value === "") {
+                selectElem.classList.remove('bg-green-100', 'border-green-500', 'bg-red-100', 'border-red-500');
+                return;
+            }
+            if(selectElem.value === correctVal) {
+                selectElem.classList.remove('bg-red-100', 'border-red-500');
+                selectElem.classList.add('bg-green-100', 'border-green-500');
+                showToast("Зөв байна!");
+            } else {
+                selectElem.classList.remove('bg-green-100', 'border-green-500');
+                selectElem.classList.add('bg-red-100', 'border-red-500');
+            }
+        }
+
+        function checkRadio(radioElem, isCorrect) {
+            const label = radioElem.parentElement;
+            if(isCorrect) {
+                label.style.color = '#16a34a'; // green
+                label.style.fontWeight = 'bold';
+                showToast("Зөв хариулт!");
+            } else {
+                label.style.color = '#dc2626'; // red
+            }
+        }
+
+        // --- 7TH GRADE LAB LOGIC ---
+
+        let currentSelectedTube7 = null;
+
+        function initLab7() {
+            const rack = document.getElementById('rack-7');
+            rack.innerHTML = '';
+            
+            substances7.forEach(sub => {
+                const isDiscovered = userData.discovered7[sub.id];
+                const displayName = isDiscovered ? sub.name : sub.code;
+                const bgColor = isDiscovered ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-300';
+                
+                const btn = document.createElement('button');
+                btn.className = `flex flex-col items-center p-2 rounded border-2 ${bgColor} hover:shadow-md transition`;
+                btn.onclick = () => selectTube7(sub.id);
+                
+                btn.innerHTML = `
+                    <div class="w-8 h-20 border-2 border-gray-400 rounded-b-xl border-t-0 relative mb-1" style="background: rgba(255,255,255,0.8)">
+                        <div class="absolute bottom-0 w-full h-1/2 bg-blue-100 opacity-50"></div>
+                    </div>
+                    <span class="text-xs font-bold text-gray-700">${sub.code}</span>
+                    ${isDiscovered ? '✅' : ''}
+                `;
+                rack.appendChild(btn);
+            });
+
+            // Populate indicators
+            const indSelect = document.getElementById('indicator7-select');
+            indSelect.innerHTML = '';
+            indicators.forEach(i => {
+                const opt = document.createElement('option');
+                opt.value = i.id;
+                opt.textContent = i.name;
+                indSelect.appendChild(opt);
+            });
+
+            renderDiscoveryCards();
+        }
+
+        function selectTube7(tubeId) {
+            currentSelectedTube7 = substances7.find(s => s.id === tubeId);
+            const isDiscovered = userData.discovered7[tubeId];
+            
+            document.getElementById('selected-tube-name').textContent = currentSelectedTube7.code;
+            document.getElementById('control-area-7').classList.remove('hidden');
+            setTimeout(() => document.getElementById('control-area-7').classList.remove('opacity-0'), 50);
+            
+            // Reset big tube
+            const liquid = document.getElementById('liquid7');
+            liquid.style.backgroundColor = 'rgba(200, 200, 200, 0.3)'; // Default clear
+            
+            const resText = document.getElementById('result-text-7');
+            if (isDiscovered) {
+                resText.innerHTML = `Та таньсан байна: <br/><span class="font-bold text-green-600">${currentSelectedTube7.name}</span>`;
+            } else {
+                resText.textContent = "Индикатор ашиглан туршина уу.";
+            }
+        }
+
+        function runExperiment7() {
+            if (!currentSelectedTube7) return;
+
+            const indId = document.getElementById('indicator7-select').value;
+            const ind = indicators.find(i => i.id === indId);
+            const result = getIndicatorColors(indId, currentSelectedTube7.type);
+
+            // Animation
+            const drop = document.getElementById('drop7');
+            drop.style.color = ind.colors.neutral || '#ccc';
+            drop.classList.remove('animate-drop');
+            void drop.offsetWidth;
+            drop.classList.add('animate-drop');
+
+            setTimeout(() => {
+                const liquid = document.getElementById('liquid7');
+                liquid.style.backgroundColor = result.color;
+                
+                const resText = document.getElementById('result-text-7');
+                if(!userData.discovered7[currentSelectedTube7.id]) {
+                    resText.innerHTML = `Ажиглалт: өнгө <span class="font-bold">${result.label.toLowerCase()}</span> боллоо.<br/>Дүгнэлтээ гаргана уу.`;
+                }
+            }, 600);
+        }
+
+        function makeConclusion(guessedType) {
+            if (!currentSelectedTube7) return;
+            if (userData.discovered7[currentSelectedTube7.id]) {
+                showToast("Та энэ уусмалыг аль хэдийн таньсан байна.");
+                return;
+            }
+
+            if (guessedType === currentSelectedTube7.type) {
+                // Correct!
+                userData.discovered7[currentSelectedTube7.id] = true;
+                saveData();
+                
+                document.getElementById('result-text-7').innerHTML = `
+                    <span class="text-green-600 font-bold text-xl">Зөв!</span><br/>
+                    Энэ бол <span class="font-bold">${currentSelectedTube7.name}</span> байлаа.
+                `;
+                showToast("Зөв тодорхойллоо!");
+                initLab7(); // Re-render rack and cards
+            } else {
+                // Incorrect
+                document.getElementById('result-text-7').innerHTML = `
+                    <span class="text-red-500 font-bold">Буруу байна.</span><br/>
+                    Дахин өөр индикатороор туршиж үзнэ үү.
+                `;
+                // Briefly flash red
+                const tube = document.querySelector('.test-tube');
+                tube.style.borderColor = '#ef4444';
+                setTimeout(()=> tube.style.borderColor = '#cbd5e1', 1000);
+            }
+        }
+
+        function renderDiscoveryCards() {
+            const container = document.getElementById('discovery-cards');
+            container.innerHTML = '';
+            
+            substances7.forEach(sub => {
+                const isDiscovered = userData.discovered7[sub.id];
+                const card = document.createElement('div');
+                
+                if (isDiscovered) {
+                    card.className = "p-3 rounded-lg border border-green-200 bg-green-50 text-center";
+                    card.innerHTML = `
+                        <div class="text-2xl mb-1">✅</div>
+                        <div class="font-bold text-xs text-gray-500">${sub.code}</div>
+                        <div class="font-bold text-green-700 text-sm">${sub.name}</div>
+                    `;
+                } else {
+                    card.className = "p-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 text-center opacity-70";
+                    card.innerHTML = `
+                        <div class="text-2xl mb-1 grayscale">❓</div>
+                        <div class="font-bold text-xs text-gray-500">${sub.code}</div>
+                        <div class="text-gray-400 text-sm">Тодорхойгүй</div>
+                    `;
+                }
+                container.appendChild(card);
+            });
+        }
+
+        // --- REFERENCE LOGIC ---
+
+        function initReference() {
+            const grid = document.getElementById('reference-grid');
+            grid.innerHTML = '';
+            
+            indicators.forEach(ind => {
+                const card = document.createElement('div');
+                card.className = 'glass p-6 rounded-2xl shadow-md hover:shadow-lg transition';
+                
+                card.innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <span class="text-4xl mr-3">${ind.icon}</span>
+                        <h3 class="text-xl font-bold text-gray-800">${ind.name}</h3>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4">${ind.desc}</p>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="w-16">Хүчил:</span>
+                            <span class="px-2 py-1 rounded text-center min-w-[80px] font-medium" style="background-color: ${ind.colors.acid}; color: ${isDark(ind.colors.acid)?'#fff':'#000'}">${ind.labels.acid}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="w-16">Саармаг:</span>
+                            <span class="px-2 py-1 rounded text-center min-w-[80px] font-medium" style="background-color: ${ind.colors.neutral}; color: ${isDark(ind.colors.neutral)?'#fff':'#000'}">${ind.labels.neutral}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="w-16">Суурь:</span>
+                            <span class="px-2 py-1 rounded text-center min-w-[80px] font-medium" style="background-color: ${ind.colors.base}; color: ${isDark(ind.colors.base)?'#fff':'#000'}">${ind.labels.base}</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        // Simple helper to decide text color over background
+        function isDark(colorStr) {
+            // Very naive check for this specific app's colors
+            if(colorStr.includes('rgba') && parseFloat(colorStr.split(',')[3]) < 0.5) return false;
+            if(colorStr === '#ff3300' || colorStr === '#6600cc' || colorStr === '#ef4444' || colorStr === '#3b82f6') return true;
+            return false;
+        }
+
+        // --- QUIZ LOGIC ---
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let activeQuizQuestions = [];
+
+        function generateQuizQuestions() {
+            // Mix of different question types
+            quizQuestions = [
+                {
+                    type: 'guess_color',
+                    q: "Метилоранж хүчиллэг орчинд ямар өнгөтэй болох вэ?",
+                    options: ["Улаан", "Шар", "Ногоон", "Өнгөгүй"],
+                    answer: 0
+                },
+                {
+                    type: 'guess_color',
+                    q: "Фенолфталейн суурилаг орчинд ямар өнгөтэй болох вэ?",
+                    options: ["Улаан", "Хөх", "Ягаан", "Өнгөгүй"],
+                    answer: 2
+                },
+                {
+                    type: 'classify',
+                    q: "Нимбэгний шүүс ямар орчинтой вэ?",
+                    options: ["Хүчиллэг", "Саармаг", "Суурилаг"],
+                    answer: 0
+                },
+                {
+                    type: 'classify',
+                    q: "Савангийн уусмал ямар орчинтой вэ?",
+                    options: ["Хүчиллэг", "Саармаг", "Суурилаг"],
+                    answer: 2
+                },
+                {
+                    type: 'choose_indicator',
+                    q: "Суурилаг орчинг тод ягаан өнгөөр танихад аль индикатор хамгийн тохиромжтой вэ?",
+                    options: ["Хөх лакмус", "Фенолфталейн", "Метилоранж", "Универсаль"],
+                    answer: 1
+                },
+                {
+                    type: 'mystery',
+                    q: "Нууц бодист хөх лакмус дүрэхэд УЛААН өнгөтэй болсон. Энэ ямар бодис байх магадлалтай вэ?",
+                    options: ["Цэвэр ус", "Хүнсний сод", "Давсны хүчил", "Натрийн гидроксид"],
+                    answer: 2 // Acid
+                },
+                {
+                    type: 'mystery',
+                    q: "Универсаль индикатор ногоон өнгөтэй болсон бол уусмал ямар орчинтой вэ?",
+                    options: ["Хүчиллэг", "Саармаг", "Суурилаг"],
+                    answer: 1
+                },
+                {
+                    type: 'guess_color',
+                    q: "Улаан лакмусын цаасыг хүчиллэг орчинд дүрэхэд өнгө хэрхэн өөрчлөгдөх вэ?",
+                    options: ["Хөх болно", "Улаан хэвээр байна", "Өнгөгүй болно", "Ногоон болно"],
+                    answer: 1
+                },
+                {
+                    type: 'classify',
+                    q: "Хүнсний содын уусмал ямар орчинтой вэ?",
+                    options: ["Хүчиллэг", "Саармаг", "Суурилаг"],
+                    answer: 2
+                },
+                {
+                    type: 'mystery',
+                    q: "Нэгэн уусмалд фенолфталейн дусаахад өнгөгүй хэвээр байв. Энэ уусмал юу байж болох вэ?",
+                    options: ["Зөвхөн хүчиллэг", "Зөвхөн саармаг", "Хүчиллэг эсвэл саармаг", "Суурилаг"],
+                    answer: 2
+                }
+            ];
+        }
+
+        function startQuiz() {
+            document.getElementById('quiz-intro').classList.add('hidden');
+            document.getElementById('quiz-result').classList.add('hidden');
+            document.getElementById('quiz-active').classList.remove('hidden');
+            
+            // Shuffle questions and pick 10 (though we only have 10, good practice)
+            activeQuizQuestions = quizQuestions.sort(() => 0.5 - Math.random()).slice(0, 10);
+            
+            currentQuestionIndex = 0;
+            score = 0;
+            document.getElementById('quiz-score').textContent = '0';
+            
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = activeQuizQuestions[currentQuestionIndex];
+            document.getElementById('quiz-question').textContent = q.q;
+            document.getElementById('quiz-progress').textContent = `Асуулт ${currentQuestionIndex + 1} / 10`;
+            document.getElementById('quiz-progress-bar').style.width = `${((currentQuestionIndex) / 10) * 100}%`;
+            
+            const optContainer = document.getElementById('quiz-options');
+            optContainer.innerHTML = '';
+            
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "bg-white border-2 border-gray-200 hover:border-green-500 hover:bg-green-50 text-gray-700 font-semibold py-3 px-4 rounded-xl transition text-left";
+                btn.textContent = opt;
+                btn.onclick = () => selectAnswer(index, btn);
+                optContainer.appendChild(btn);
+            });
+
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('btn-next-question').classList.add('hidden');
+        }
+
+        function selectAnswer(selectedIndex, btnElement) {
+            // Disable all buttons
+            const buttons = document.getElementById('quiz-options').querySelectorAll('button');
+            buttons.forEach(b => {
+                b.disabled = true;
+                b.classList.remove('hover:border-green-500', 'hover:bg-green-50');
+            });
+
+            const q = activeQuizQuestions[currentQuestionIndex];
+            const feedback = document.getElementById('quiz-feedback');
+            feedback.classList.remove('hidden');
+
+            if (selectedIndex === q.answer) {
+                // Correct
+                btnElement.classList.add('border-green-500', 'bg-green-100', 'text-green-800');
+                feedback.className = "p-4 rounded-lg mb-4 text-center font-medium bg-green-100 text-green-800";
+                feedback.innerHTML = "✅ Зөв хариулт!";
+                score += 10;
+                document.getElementById('quiz-score').textContent = score;
+            } else {
+                // Incorrect
+                btnElement.classList.add('border-red-500', 'bg-red-100', 'text-red-800');
+                buttons[q.answer].classList.add('border-green-500', 'bg-green-100'); // Highlight correct
+                
+                feedback.className = "p-4 rounded-lg mb-4 text-center font-medium bg-red-100 text-red-800";
+                feedback.innerHTML = `❌ Буруу байна. Зөв хариулт: <b>${q.options[q.answer]}</b>`;
+            }
+
+            document.getElementById('btn-next-question').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < activeQuizQuestions.length) {
+                loadQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            document.getElementById('quiz-active').classList.add('hidden');
+            const resView = document.getElementById('quiz-result');
+            resView.classList.remove('hidden');
+            
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('quiz-progress-bar').style.width = `100%`;
+
+            const msgEl = document.getElementById('quiz-result-message');
+            const iconEl = document.getElementById('quiz-result-icon');
+            
+            if (score === 100) {
+                msgEl.textContent = "Гайхалтай! Та химийн жинхэнэ мастер юм.";
+                iconEl.textContent = "🏆";
+            } else if (score >= 80) {
+                msgEl.textContent = "Маш сайн! Бага зэрэг давтахад л төгс болно.";
+                iconEl.textContent = "🥇";
+            } else if (score >= 50) {
+                msgEl.textContent = "Дажгүй шүү. Гэхдээ лавлах хэсгийг дахин нэг уншаарай.";
+                iconEl.textContent = "👍";
+            } else {
+                msgEl.textContent = "Туршилтаа дахин сайн хийж, мэдлэгээ батжуулаарай.";
+                iconEl.textContent = "📚";
+            }
+
+            if (score > userData.maxScore) {
+                userData.maxScore = score;
+                saveData();
+            }
+        }
+
+        // --- SLIME MINIGAME LOGIC ---
+        let slimeScore = 0;
+        let slimeRound = 0;
+        const slimeMaxRounds = 5;
+        let currentSlimeTarget = null;
+        
+        const slimeTargets = [
+            { name: 'Лакмус', targetColor: 'улаан', cssColor: '#ef4444', requiredType: 'acid' },
+            { name: 'Лакмус', targetColor: 'хөх', cssColor: '#3b82f6', requiredType: 'base' },
+            { name: 'Фенолфталейн', targetColor: 'ягаан', cssColor: '#ec4899', requiredType: 'base' },
+            { name: 'Метилоранж', targetColor: 'улаан', cssColor: '#ef4444', requiredType: 'acid' },
+            { name: 'Универсаль', targetColor: 'ногоон', cssColor: '#22c55e', requiredType: 'neutral' }
+        ];
+
+        const slimeSubstancesList = [
+            { name: 'Нимбэгний шүүс', icon: '🍋', type: 'acid' },
+            { name: 'Савангийн уусмал', icon: '🧼', type: 'base' },
+            { name: 'Хүнсний сод', icon: '🧂', type: 'base' },
+            { name: 'Sprite ундаа', icon: '🥤', type: 'acid' },
+            { name: 'Уксус (Цууны хүчил)', icon: '🧴', type: 'acid' },
+            { name: 'Цэвэр ус', icon: '💧', type: 'neutral' },
+            { name: 'Давсны хүчил', icon: '🧪', type: 'acid' },
+            { name: 'Натрийн гидроксид', icon: '🧪', type: 'base' }
+        ];
+
+        function showGameMenu() {
+            document.getElementById('game-menu').classList.remove('hidden');
+            document.getElementById('quiz-main-container').classList.add('hidden');
+            document.getElementById('slime-game-container').classList.add('hidden');
+        }
+
+        function initStartQuiz() {
+            document.getElementById('game-menu').classList.add('hidden');
+            document.getElementById('quiz-main-container').classList.remove('hidden');
+            document.getElementById('quiz-intro').classList.remove('hidden');
+            document.getElementById('quiz-active').classList.add('hidden');
+            document.getElementById('quiz-result').classList.add('hidden');
+        }
+
+        function startSlimeGame() {
+            document.getElementById('game-menu').classList.add('hidden');
+            document.getElementById('slime-game-container').classList.remove('hidden');
+            document.getElementById('slime-active').classList.remove('hidden');
+            document.getElementById('slime-result').classList.add('hidden');
+            
+            slimeScore = 0;
+            slimeRound = 0;
+            nextSlimeRound();
+        }
+
+        function nextSlimeRound() {
+            if (slimeRound >= slimeMaxRounds) {
+                endSlimeGame();
+                return;
+            }
+            
+            slimeRound++;
+            document.getElementById('slime-progress').textContent = `Үе ${slimeRound} / ${slimeMaxRounds}`;
+            document.getElementById('slime-score').textContent = slimeScore;
+            
+            // Reset character
+            const char = document.getElementById('slime-character');
+            char.style.backgroundColor = 'rgba(200,200,200,0.5)';
+            char.classList.remove('animate-bounce', 'shake');
+            document.getElementById('slime-face').textContent = '( º _ º )';
+            
+            // Pick target
+            currentSlimeTarget = slimeTargets[Math.floor(Math.random() * slimeTargets.length)];
+            document.getElementById('slime-speech').innerHTML = `Би <span class="text-blue-600 font-extrabold">${currentSlimeTarget.name}</span> байна.<br/> Намайг <span class="font-extrabold" style="color:${currentSlimeTarget.cssColor}">${currentSlimeTarget.targetColor}</span> болгооч!
+                <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-gray-200 rotate-45"></div>`;
+            
+            // Pick options (1 correct, 3 wrong/random)
+            let correctOptions = slimeSubstancesList.filter(s => s.type === currentSlimeTarget.requiredType);
+            let wrongOptions = slimeSubstancesList.filter(s => s.type !== currentSlimeTarget.requiredType);
+            
+            // Shuffle arrays
+            correctOptions.sort(() => 0.5 - Math.random());
+            wrongOptions.sort(() => 0.5 - Math.random());
+            
+            let roundOptions = [correctOptions[0], wrongOptions[0], wrongOptions[1], wrongOptions[2]];
+            roundOptions.sort(() => 0.5 - Math.random()); // Shuffle the final 4 options
+            
+            const optContainer = document.getElementById('slime-options');
+            optContainer.innerHTML = '';
+            
+            roundOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "bg-white border-2 border-gray-200 hover:border-green-400 hover:bg-green-50 text-gray-800 font-bold py-3 px-4 rounded-xl shadow-sm transition flex items-center justify-center space-x-2";
+                btn.innerHTML = `<span class="text-2xl">${opt.icon}</span> <span>${opt.name}</span>`;
+                btn.onclick = () => checkSlimeAnswer(opt, btn);
+                optContainer.appendChild(btn);
+            });
+        }
+
+        function checkSlimeAnswer(selectedItem, btnElement) {
+            // Disable buttons
+            const buttons = document.getElementById('slime-options').querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+            
+            const char = document.getElementById('slime-character');
+            const face = document.getElementById('slime-face');
+            
+            char.classList.remove('animate-bounce', 'shake');
+            void char.offsetWidth; // trigger reflow
+            
+            if (selectedItem.type === currentSlimeTarget.requiredType) {
+                // Correct
+                btnElement.classList.add('border-green-500', 'bg-green-100');
+                char.style.backgroundColor = currentSlimeTarget.cssColor;
+                char.classList.add('animate-bounce');
+                face.textContent = '( ˘ ▽ ˘ )';
+                slimeScore++;
+                document.getElementById('slime-score').textContent = slimeScore;
+                showToast("Амттай байна! Зөв сонголт.");
+            } else {
+                // Incorrect
+                btnElement.classList.add('border-red-500', 'bg-red-100');
+                char.style.backgroundColor = '#9ca3af'; // Grayish
+                char.classList.add('shake');
+                face.textContent = '( ╥ _ ╥ )';
+                showToast("Өө үгүй ээ! Буруу бодис байна.");
+            }
+            
+            setTimeout(nextSlimeRound, 2000);
+        }
+
+        function endSlimeGame() {
+            document.getElementById('slime-active').classList.add('hidden');
+            document.getElementById('slime-result').classList.remove('hidden');
+            document.getElementById('slime-final-score').textContent = slimeScore;
+            
+            if (slimeScore === slimeMaxRounds) {
+                showToast("Агуу! Та бүх үеийг амжилттай давлаа.");
+            }
+        }
+
+        // --- ACHIEVEMENTS & PROFILE ---
+
+        function checkBadges() {
+            let newlyUnlocked = false;
+            
+            // Count total experiments done in 6th grade (count keys with indicators)
+            let exp6Count = 0;
+            if (userData.worksheet6) {
+                Object.values(userData.worksheet6).forEach(sub => {
+                    Object.keys(sub).forEach(k => {
+                        if(k !== 'conclusion') exp6Count++;
+                    });
+                });
+            }
+
+            const activeBadgesDef = [
+                { id: 'novice', name: 'Анхан шатны судлаач', desc: 'Эхний туршилтаа хийсэн', icon: '🔍', condition: (d) => exp6Count > 0 },
+                { id: 'little_scientist', name: 'Бяцхан судлаач', desc: 'Ажлын хуудсыг дүүргэсэн', icon: '📝', condition: (d) => exp6Count >= 8 },
+                { id: 'quiz_master', name: 'Химийн мастер', desc: 'Сорилд 80+ оноо авсан', icon: '🎓', condition: (d) => d.maxScore >= 80 },
+                { id: 'expert', name: 'Лабораторийн эксперт', desc: 'Бүх нууц уусмалыг таньсан', icon: '🌟', condition: (d) => Object.keys(d.discovered7).length === substances7.length }
+            ];
+
+            activeBadgesDef.forEach(b => {
+                if (!userData.unlockedBadges.includes(b.id) && b.condition(userData)) {
+                    userData.unlockedBadges.push(b.id);
+                    newlyUnlocked = true;
+                    showToast(`Шинэ тэмдэг нээгдлээ: ${b.name} ${b.icon}`);
+                }
+            });
+            if (newlyUnlocked) saveData();
+        }
+
+        function renderBadges() {
+            const container = document.getElementById('badges-container');
+            container.innerHTML = '';
+            
+            const activeBadgesDef = [
+                { id: 'novice', name: 'Анхан шатны судлаач', desc: 'Эхний туршилтаа хийсэн', icon: '🔍' },
+                { id: 'little_scientist', name: 'Бяцхан судлаач', desc: 'Ажлын хуудсыг дүүргэсэн', icon: '📝' },
+                { id: 'quiz_master', name: 'Химийн мастер', desc: 'Сорилд 80+ оноо авсан', icon: '🎓' },
+                { id: 'expert', name: 'Лабораторийн эксперт', desc: 'Бүх нууц уусмалыг таньсан', icon: '🌟' }
+            ];
+
+            activeBadgesDef.forEach(b => {
+                const isUnlocked = userData.unlockedBadges.includes(b.id);
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl border ${isUnlocked ? 'border-yellow-400 bg-yellow-50 badge-unlocked' : 'border-gray-200 bg-gray-50 opacity-60'} flex flex-col items-center`;
+                
+                div.innerHTML = `
+                    <div class="badge-icon mb-2">${b.icon}</div>
+                    <div class="font-bold text-sm ${isUnlocked ? 'text-gray-800' : 'text-gray-400'}">${b.name}</div>
+                    <div class="text-xs text-gray-500 mt-1">${b.desc}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateProfileStats() {
+            let exp6Count = 0;
+            if (userData.worksheet6) {
+                Object.values(userData.worksheet6).forEach(sub => {
+                    Object.keys(sub).forEach(k => {
+                        if(k !== 'conclusion') exp6Count++;
+                    });
+                });
+            }
+            document.getElementById('stat-exp6').textContent = exp6Count;
+            document.getElementById('stat-exp7').textContent = `${Object.keys(userData.discovered7).length} / ${substances7.length}`;
+            document.getElementById('stat-score').textContent = userData.maxScore;
+            
+            // Hide the old history table in profile since we use the grid now, or adapt it.
+            const profileTableCont = document.getElementById('profile-table-6');
+            if(profileTableCont) {
+                profileTableCont.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">6-р ангийн цэс рүү орж ажлын хуудсаа харна уу.</td></tr>';
+            }
+            renderBadges();
+        }
+
+    </script>
+</body>
+</html>
